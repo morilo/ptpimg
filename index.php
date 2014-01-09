@@ -9,157 +9,26 @@ $Cache=NEW CACHE;
 
 session_start();
 
-function getdata($f,$nomd5=false) {
-	if(!$nomd5) 
-		$Md5=md5_file($f);
-	else
-		$Md5="";
-	$Type = @exif_imagetype($f);
-	switch ($Type) {
-		case 1:
-		$ext="gif";
-		break;
-	case 2:
-		$ext="jpg";
-		break;
-	case 3:
-		$ext="png";
-		break;
-	}
-	
-	$size=filesize($f);
-	
-	list($w,$h,$t,$a)=getimagesize($f);
-	$res=$w.'x'.$h;
-	return array("ext"=>$ext,"res"=>$res,"type"=>$Type,"md5"=>$Md5,"size"=>$size);
-	
-}
 
-/**
- * XOR encrypts a given string with a given key phrase.
- *
- * @param     string    $InputString    Input string
- * @param     string    $KeyPhrase      Key phrase
- * @return    string    Encrypted string    
- */    
-function XFN($InputString, $KeyPhrase="BMhNQID^s<W.<lxXbED9\X#;6jmT,Ha0sq'B9#fm])@3ax~#'1cqS]G#U-@2qp]"){
-    $KeyPhraseLength = strlen($KeyPhrase);
-    // Loop trough input string
-    for ($i = 0; $i < strlen($InputString); $i++){
-        // Get key phrase character position
-        $rPos = $i % $KeyPhraseLength;
-        // Magic happens here:
-        $r = ord($InputString[$i]) ^ ord($KeyPhrase[$rPos]);
-        // Replace characters
-        $InputString[$i] = chr($r);
-    }
-    return $InputString;
-}
-function XOREncrypt($i){
-    return base64_encode(XFN($i));
-}
- 
-function XORDecrypt($i){
-    return XFN(base64_decode($i));
-}
- 
-// USED BY TDMAKER
+require("helpers.php");
+
+
 if (isset($_GET['type']) && $_GET['type']=="uploadv7") { // upload via Java application
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
-
- 	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP")) die("404/Invalid API key");
-
-	while ($code=randFN()) {
-		if (!file_exists('raw/$code')) break;
-	}
-	$Data=getdata($_FILES['uploadfile']['tmp_name']);
-	$res=$Data['res'];
-	$ext=$Data['ext'];
-	$hash=$Data['md5'];
-	$size=$Data['size'];
-	$ImageType=$Data['type'];
-	$DB->query("SELECT Code, Extension FROM uploads WHERE NewHash='".db_string($hash)."'");
-	if ($DB->record_count()>0) {
-		list($Code, $Extension)=$DB->next_record();
-	
-		$results[]=array("status"=>13,"code"=>$Code, "ext"=>$Extension);
-		echo $Code.'.'.$Extension;
-		die();
-	}
-
-	// Flush image contents to a temp file
-	//$src=tempnam("/tmp", "ptpimg.");
-	$src="raw/$code";
-
-	if (!move_uploaded_file($_FILES['uploadfile']['tmp_name'], $src)) die("error");
-	$results=array();
-
-	$DB->query("INSERT INTO uploads (NewHash, UserID, Extension, Code, Resolution, Size, Type) VALUES('".db_string($hash)."', '".db_string($_GET['uid'])."', '".db_string($ext)."', '".db_string($code)."', '".db_string($res)."', '".db_string($size)."', '".db_string($ImageType)."')");
-	if ($DB->affected_rows()>0) {
-		// Serialized returns with status code 1
-		$results[]=array("status"=>1,"code"=>$code, "ext"=>$ext);
-	}
-	echo $code.'.'.$ext;
-	die();
+	require("javaupload.php");
 }
 
-// USED BY PTPIMG UPLOAD
 if (isset($_GET['type']) && $_GET['type']=="uploadv3") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
- 
-	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP")) die("404/Invalid API key");
-	
-	while ($code=randFN()) {
-		if (!file_exists('raw/$code')) break;
-	}
-	$Data=getdata($_FILES['uploadfile']['tmp_name']);
-	$res=$Data['res'];
-	$ext=$Data['ext'];
-	$hash=$Data['md5'];
-	$size=$Data['size'];
-	$ImageType=$Data['type'];
-	$DB->query("SELECT Code, Extension FROM uploads WHERE NewHash='".db_string($hash)."'");
-	if ($DB->record_count()>0) {
-		list($Code, $Extension)=$DB->next_record();
-	
-		$results[]=array("status"=>13,"code"=>$Code, "ext"=>$Extension);
-		echo json_encode($results);
-		die();
-	}
-	
-	// Flush image contents to a temp file
-	//$src=tempnam("/tmp", "ptpimg.");
-	$src="raw/$code";
-	
-	$Data=getdata($_FILES['uploadfile']['tmp_name']);
-	
-	if (!move_uploaded_file($_FILES['uploadfile']['tmp_name'], $src)) die("error");
-	$results=array();
-
-        $DB->query("INSERT INTO uploads (NewHash, UserID, Extension, Code, Resolution, Size, Type) VALUES('".db_string($hash)."', '".db_string($_GET['uid'])."', '".db_string($ext)."', '".db_string($code)."', '".db_string($res)."', '".db_string($size)."', '".db_string($ImageType)."')");
-	if ($DB->affected_rows()>0) {
-		// Serialized returns with status code 1
-		$results[]=array("status"=>1,"code"=>$code, "ext"=>$ext);
-	} else {
-		die("db error?");
-	}
-	if(isset($_GET['tdmaker'])) {
-		echo "http://ptpimg.me/".$code.".".$ext;
-	} else {
-		echo json_encode($results);
-	}
-	die();
+	require("ajaxupload.php");
 }
- 
+
 
 // type = upload
-if (isset($_GET['type']) && $_GET['type']=="upload") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
+/*if (isset($_GET['type']) && $_GET['type']=="upload") {
 	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP") && $_GET['key']!="iSQGkh6VJjAtkMjcDQysTPXOUGxiHutVYBw71"
 	&& $_GET['key']!="wcbdwNeUeEt3O5dJsQT8AS04zX9rfNDrpHLQE") die("404/Invalid API key");
 	if (!isset($_GET['url'])) die("404/Missing URL");
 	if (!isset($_GET['uid']) || !is_number($_GET['uid'])) die("404/Invalid User ID");
-	
+
 	// First, attempt to weed out any files which just don't make sense
 	if (preg_match("/^http(s)?:\/\/.+\.(png|gif|jpg|jpeg)$/i",$_GET['url'],$ext))
 		$ext = $ext[2];
@@ -174,13 +43,13 @@ if (isset($_GET['type']) && $_GET['type']=="upload") {
 	$src=tempnam("/tmpfs", "ptpimg.");
 	$file=fopen($src,'w+');
 	fwrite($file,$Image);
-	
+
 	$Data=getdata($src);
 	$ext=$Data['ext'];
 	$res=$Data['res'];
 	$ImageType=$Data['Type'];
 	$size=$Data['size'];
-	
+
 	switch ($ImageType) {
 		case 1:
 		case 2:
@@ -200,20 +69,10 @@ if (isset($_GET['type']) && $_GET['type']=="upload") {
 		break;
 		default:
 			die("404/Invalid exif data");
-	}	
-}
-
-function randFN($Length=6) {
-	$o='';
-	for ($i=0; $i<$Length; $i++) {
-		$d=rand(1,30)%2;
-		$o.=$d ? chr(rand(97,122)) : chr(rand(48,57));
 	}
-	return $o;
-}
+}*/
 
-if (isset($_GET['type']) && $_GET['type']=="faux") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
+/*if (isset($_GET['type']) && $_GET['type']=="faux") {
         if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP")) die("404/Invalid API key");
         if (!isset($_GET['url'])) die("404/Missing URL");
         if (!isset($_GET['uid']) || !is_numeric($_GET['uid'])) die("404/Invalid User ID");
@@ -240,196 +99,17 @@ if (isset($_GET['type']) && $_GET['type']=="faux") {
 	}
         echo json_encode($results);
         die();
-}
+}*/
 
 if (isset($_GET['type']) && $_GET['type']=="uploadv2") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
-	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP" && $_GET['key']!="iSQGkh6VJjAtkMjcDQysTPXOUGxiHutVYBw71")) die("404/Invalid API key");
-	if (!isset($_GET['url'])) die("404/Missing URL");
-	if (!isset($_GET['uid']) || !is_numeric($_GET['uid'])) die("404/Invalid User ID");
-	
-	if ($_GET['url']=="c_h_e_c_k_p_o_s_t") {
-		$_GET['url']=$_POST['urls'];
-	}
-
-	if (strpos($_GET['url'],"\n"))
-		$urls=explode("\n",$_GET['url']);
-	else {
-		$urls=array();
-		$urls[]=$_GET['url'];
-	}
-	$results=array();
-	foreach($urls as $url) {
-		// First, attempt to weed out any files which just don't make sense
-		if (preg_match("/^http(s)?:\/\/.+\.(png|gif|jpg|jpeg)$/i",$url,$ext))
-			$ext = $ext[2];
-		else
-			continue;
-		
-		// Retrieve the image, check it's md5sum, it might already exist on our server
-		$Image = file_get_contents($url);
-		if (!$Image) die("404/Invalid URL (data missing)");
-		$Unique = uniqid();
-		$tmpFile=fopen("/tmpfs/ptpimg_".$Unique, 'w+');
-		fwrite($tmpFile, $Image);
-
-		$Data=getdata("/tmpfs/ptpimg_".$Unique);
-		$ext=$Data['ext'];
-		$res=$Data['res'];
-		$ImageType=$Data['type'];
-		$size=$Data['size'];
-		$hash=$Data['md5'];
-		$DB->query("SELECT Code, Extension FROM uploads WHERE NewHash='".db_string($hash)."'");
-
-		if ($DB->record_count()>0) {
-			unlink("/tmpfs/ptpimg_".$Unique);
-                        list($Code, $Extension)=$DB->next_record();
-			$results[]=array("status"=>13,"code"=>$Code, "ext"=>$Extension);
-			continue;
-                }
-
-		$code='';
-		while ($code=randFN()) {
-			if (!file_exists('raw/$code')) break;
-		}
-		
-		// Flush image contents to a temp file
-		//$src=tempnam("/tmp", "ptpimg.");
-		$src="raw/$code";
-		rename("/tmpfs/ptpimg_".$Unique, $src);
-		// Read image type
-		// 1-gif, 2-jpeg, 3-png
-		switch ($ImageType) {
-			case 1:
-			case 2:
-			case 3:
-				$DB->query("INSERT INTO uploads (NewHash, UserID, Extension, Code, Resolution, Size, Type) VALUES('".db_string($hash)."', '".db_string($_GET['uid'])."', '".db_string($ext)."', '".db_string($code)."', '".db_string($res)."', '".db_string($size)."', '".db_string($ImageType)."')");
-				if ($DB->affected_rows()>0) {
-					// Serialized returns with status code 1
-					$results[]=array("status"=>1,"code"=>$code, "ext"=>$ext);
-				}
-			break;
-		}	
-	}
-	echo json_encode($results);
-	die();
+	require("urlupload.php");
 }
 
-if (isset($_GET['type']) && $_GET['type']=="genak") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
-	if (!isset($_GET['name'])) die("404/Missing filename");
-	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP")) die("404/Missing key");
-	$s=time()."|".$_GET['name'];// <<<<<<<<<<<<<<
-	echo urlencode(XOREncrypt($s));
-}
-if (isset($_GET['type']) && $_GET['type']=="showak") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
-	if (!isset($_GET['ak'])) die("404/Missing ak");
-	echo "ak contents: ".XORDecrypt($_GET['ak']);
-}
 
-// THIS SERVES THE ACTUAL IMAGE - MANY HITS PER SECOND
 if (isset($_GET['type']) && $_GET['type']=="short") {
-	//$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
-	if (!isset($_GET['code'])) die("404/Missing code");
-	if ($_GET['code'] == "favicon") die();
-	if (strpos($_GET['code'],'/')) {
-		$code=explode('/',$_GET['code']);
-		$r=rand(0,count($code)-1);
-		$code=$code[$r];
-	}
-	else $code=$_GET['code'];
-	$code=substr($code, 0, 6); // cut off the file extension
-	
-	// Check if they're coming from a partner site
-	if(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
-		$Host=parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-		if(array_find($Host, $AllowedSites)===FALSE) {
-			$DB->query("INSERT INTO access_unauth(Code,Browser,Referer,IP) VALUES('%s', '%s', '%s', %d)", $code, $_SERVER['HTTP_USER_AGENT'], $_SERVER['HTTP_REFERER'], ip2long($_SERVER['REMOTE_ADDR']));
-			header("HTTP/1.0 403 Forbidden");
-			die();
-		}
-	}
-	# 6/24
-
-	header("Cache-Control: private, max-age=1209600, pre-check=10800");
-	header("Pragma: private");
-	header("Expires: " . date(DATE_RFC822,strtotime(" 14 day")));
-
-	if(isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])){
-	  // if the browser has a cached version of this image, send 304
-	  header('Last-Modified: '.$_SERVER['HTTP_IF_MODIFIED_SINCE'],true,304);
-	  exit;
-	}
-	$Size=-1;
-	$ImageType=-1;
-	if(!($ImgData=$Cache->get_value('imgdata_'.$code))) {
-		$DB->query("SELECT Size, Type FROM uploads WHERE Code='".db_string($code)."'");
-		if ($DB->record_count()>0) {
-			list($Size,$ImageType)=$DB->next_record();
-			$Cache->cache_value('imgdata_'.$code, array('size'=>$Size, 'type'=>$ImageType), 0);
-		} else {
-			$Cache->cache_value('imgdata_'.$code, array('size'=>-1, 'type'=>-1), 120);
-		}
-	} else {
-		$Size=$ImgData['size'];
-		$ImageType=$ImgData['type'];
-		if($Size<0 || $ImageType<0) {
-			header("HTTP/1.0 404 Not Found");
-			die();
-		}
-	}
-
-	switch ($ImageType) {
-		case 1:
-			header("Content-type: image/gif");
-		break;
-		case 2:
-			header("Content-type: image/jpeg");
-		break;
-		case 3:
-			header("Content-type: image/png");
-		break;
-		default:
-			header("Content-type: application/octet-stream");
-	}
-
-	if (($lasthpm=$Cache->get_value('ptpimg_hpm_last'))===false) {
-				// last values
-                $lasthpm = $Cache->get_value('ptpimg_hpm');
-				$lastbw = $Cache->get_value('ptpimg_bw');
-                
-				$Cache->cache_value('ptpimg_hpm_last', $lasthpm, 60);
-				$Cache->cache_value('ptpimg_bw_last', $lastbw, 60);
-				
-				$Cache->delete_value('ptpimg_hpm');
-                $Cache->delete_value('ptpimg_bw');
-				if($lasthpm>0 && $lastbw>0)
-					$DB->query("INSERT into records (hits,bandwidth) value(%d, %d)", $lasthpm, $lastbw);
-
-
-	}
-	if (($hpm=$Cache->get_value('ptpimg_hpm'))===false) {
-		$hpm = 1;
-		$Cache->cache_value('ptpimg_hpm', $hpm, 0);
-	} else {
-		$Cache->increment('ptpimg_hpm');
-	}
-
-	if (($bwpm=$Cache->get_value('ptpimg_bw'))===false) {
-		$bw = $Size;
-		$Cache->cache_value('ptpimg_bw', $bw, 0);
-	} else {
-		$Cache->increment('ptpimg_bw', $Size);
-	}
-	header("Content-length: $Size");
-	$Contents=file_get_contents("raw/$code");
-	echo $Contents;
-	//$DB->query("INSERT INTO access(Code,Browser,Referer,IP) VALUES('%s', '%s', '%s', %d)", $code, $_SERVER['HTTP_USER_AGENT'], $_SERVER['HTTP_REFERER'], ip2long($_SERVER['REMOTE_ADDR']));
-	die(); // safe exit
+	require("serveimg.php");
 }
-if (isset($_GET['type']) && $_GET['type']=="retrieve") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
+/*if (isset($_GET['type']) && $_GET['type']=="retrieve") {
 	if (!isset($_GET['name'])) die("404/Missing filename");
 	//if (!isset($_GET['uid']) || !is_number($_GET['uid'])) die("404/Invalid User ID");
 	if (!preg_match("/\?ak=(.+)/",$_SERVER['REQUEST_URI'],$ak)) die("403/Invalid ak");
@@ -478,12 +158,11 @@ if (isset($_GET['type']) && $_GET['type']=="retrieve") {
 	$Contents=file_get_contents("raw/$name");
 	echo $Contents;
 	die(); // safe exit
-}
+}*/
 if (isset($_GET['type']) && $_GET['type']=="prop_display") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
 	if (!isset($_GET['code'])) die("404/Missing code");
 	if (!isset($_GET['ext'])) die("404/Missing ext");
-	
+
 	if (!strpos($_GET['code'],'|'))
 		$urls[]=$_GET['code'];
 	else
@@ -505,15 +184,21 @@ $Proto=($_SERVER['HTTPS']=="on")?'https':'http';
 <?
 die();
 }
-if (isset($_GET['act']) && $_GET['act']=="register") {
-	$DB->query("INSERT INTO entrypoint_logs (querystring) VALUES('" . db_string($_SERVER['QUERY_STRING']) . "')");
+/*if (isset($_GET['act']) && $_GET['act']=="register") {
 	die("invalid ak");
-}
+}*/
 
 ?>
 <html>
 <head>
 <title>ptpimg.me</title>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<!-- Generic page styles -->
+<link rel="stylesheet" href="css/style.css">
+<!-- blueimp Gallery styles -->
+<link rel="stylesheet" href="css/blueimp-gallery.min.css">
+<!-- CSS to style the file input field as button and adjust the Bootstrap progress bars -->
+<link rel="stylesheet" href="css/jquery.fileupload-ui.css">
 <style type="text/css">
 body{
 background: #2e2e2e;
@@ -546,24 +231,15 @@ ul#files li img{ max-width:180px; max-height:150px; }
 .success{ background:#99f099; border:1px solid #339933; }
 .error{ background:#f0c6c3; border:1px solid #cc6622; }
 </style>
-<script type="text/javascript">
-function sa(id)
-{
-    document.getElementById(id).focus();
-    document.getElementById(id).select();
-}
 
-</script>
+
 <script type="text/javascript" src="ibox/ibox.js"></script>
 <script type="text/javascript" src="special.js"></script>
-<script type="text/javascript" src="multifile_compressed.js"></script>
-<script type="text/javascript" src="js/jquery.js" ></script>
-<script type="text/javascript" src="js/ajaxupload.3.5.js" ></script>
 <script type="text/javascript">
 iBox.padding = 50;
 iBox.inherit_frames = false;
 
-	$(function(){
+	/*$(function(){
 		var btnUpload=$('#upload');
 		var status=$('#status');
 		new AjaxUpload(btnUpload, {
@@ -574,8 +250,8 @@ iBox.inherit_frames = false;
 			<? } ?>
 			name: 'uploadfile',
 			onSubmit: function(file, ext){
-				 if (! (ext && /^(jpg|png|jpeg|gif)$/.test(ext))){ 
-                    // extension is not allowed 
+				 if (! (ext && /^(jpg|png|jpeg|gif)$/.test(ext))){
+                    // extension is not allowed
 					status.text('Only JPG, PNG or GIF files are allowed');
 					return false;
 				}
@@ -597,16 +273,14 @@ iBox.inherit_frames = false;
 				}
 			}
 		});
-		
-	});
+
+	});*/
 </script>
 </head>
 
 <body>
 <p align="center"><img src="landing_border.png" width="300" height="112" /></p>
-<br><br>
-<h1 align="center">Check out the <a href=../newupload/>new upload</a> page!</h1>
-<br>
+<h4 align="center">need your images hosted?</h4>
 <center>
 	<span id="url_upload">
 	<p><strong>upload via url</strong> (separate each url by a new line)</p>
@@ -615,47 +289,181 @@ iBox.inherit_frames = false;
 		<input type="submit" value="upload" />
 	</form>
 	</span>
-	<p><strong>upload via file</strong></p>
-		<div id="upload" ><span>Upload File<span></div><span id="status" ></span>
-		<ul id="files" ></ul>
-<? if ($_GET['beta']=="true") { ?>
-    <script src="fileuploader.js" type="text/javascript"></script>
-		<link href="fileuploader.css" rel="stylesheet" type="text/css">	
-	<div id="zxc">		
-	</div>
-	
-    <script>        
-        function createUploader(){            
-            var uploader = new qq.FileUploader({
-                element: document.getElementById('zxc'),
-                action: '/index.php?type=uploadv7&key=QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP',
-				allowedExtensions: ['jpg','jpeg','png','gif'],
-				onComplete: function(id, fileName, responseJSON) {
-					rsp = eval(responseJSON);
-					alert(rsp[0].code);
-					if (rsp[0].status=='1') {
-						$('<li></li>').appendTo('#files').html('<img src="'+rsp[0].code+'.'+rsp[0].ext+'" alt="" /><br />'+rsp[0].code+'.'+rsp[0].ext+'<br /><input type="text" size="20" id="'+rsp[0].code+'" onclick=\'sa("'+rsp[0].code+'");\' value="http://ptpimg.me/'+rsp[0].code+'.'+rsp[0].ext+'" />').addClass('success');
-					} else{
-						$('<li></li>').appendTo('#files').text(file).addClass('error');
-					}
-				}
-            });           
-        }
-        
-        // in your app create uploader as soon as the DOM is ready
-        // don't wait for the window to load  
-        window.onload = createUploader;     
-    </script>   
-<? } ?>
+
+<!-- ***** BEGIN MULTIUPLOADER ***** -->
+
+<div class="container">
+    <!-- The file upload form used as target for the file upload widget -->
+    <form id="fileupload" action="index.php" method="POST" enctype="multipart/form-data">
+        <!-- The fileupload-buttonbar contains buttons to add/delete files and start/cancel the upload -->
+        <div class="row fileupload-buttonbar">
+            <div class="col-lg-12">
+                <!-- The fileinput-button span is used to style the file input field as button -->
+                <span class="btn btn-success fileinput-button">
+                    <i class="glyphicon glyphicon-plus"></i>
+                    <span>Add files...</span>
+                    <input type="file" name="files[]" multiple>
+                </span>
+                <button type="submit" class="btn btn-primary start">
+                    <i class="glyphicon glyphicon-upload"></i>
+                    <span>Start upload</span>
+                </button>
+                <button type="reset" class="btn btn-warning cancel">
+                    <i class="glyphicon glyphicon-ban-circle"></i>
+                    <span>Cancel upload</span>
+                </button>
+                <!--<button type="button" class="btn btn-danger delete">
+                    <i class="glyphicon glyphicon-trash"></i>
+                    <span>Delete</span>
+                </button>
+                <input type="checkbox" class="toggle">-->
+                <!-- The loading indicator is shown during file processing -->
+                <span class="fileupload-loading"></span>
+            </div>
+        </div>
+        <div class="row fileupload-buttonbar">
+            <!-- The global progress information -->
+            <div class="col-lg-12 fileupload-progress fade">
+                <!-- The global progress bar -->
+                <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar progress-bar-success" style="width:0%;"></div>
+                </div>
+                <!-- The extended global progress information -->
+                <div class="progress-extended">&nbsp;</div>
+            </div>
+        </div>
+        <div style="padding-bottom: 15px">
+        	<textarea style="width: 332px;" rows="3" onclick="this.select();" class="all-links-list" placeholder="Uploaded Image URLs..."></textarea>
+        </div>
+        <!-- The table listing the files available for upload/download -->
+        <table role="presentation" class="table table-striped"><tbody class="files"></tbody></table>
+    </form>
+</div>
+
+<!-- The template to display files available for upload -->
+<script id="template-upload" type="text/x-tmpl">
+{% for (var i=0, file; file=o.files[i]; i++) { %}
+    <tr class="template-upload fade">
+        <td>
+            <span class="preview"></span>
+        </td>
+        <td>
+        	<input type="hidden" class="positionid input" name="positionid" value="0">
+            <p class="name">{%=file.name%}</p>
+            {% if (file.error) { %}
+                <div><span class="label label-danger">Error</span> {%=file.error%}</div>
+            {% } %}
+        </td>
+        <td>
+            <p class="size">{%=o.formatFileSize(file.size)%}</p>
+            {% if (!o.files.error) { %}
+                <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar progress-bar-success" style="width:0%;"></div></div>
+            {% } %}
+        </td>
+        <td>
+            {% if (!o.files.error && !i && !o.options.autoUpload) { %}
+                <button class="btn btn-primary start">
+                    <i class="glyphicon glyphicon-upload"></i>
+                    <span>Start</span>
+                </button>
+            {% } %}
+            {% if (!i) { %}
+                <button class="btn btn-warning cancel">
+                    <i class="glyphicon glyphicon-ban-circle"></i>
+                    <span>Cancel</span>
+                </button>
+            {% } %}
+        </td>
+    </tr>
+{% } %}
+</script>
+<!-- The template to display files available for download -->
+<script id="template-download" type="text/x-tmpl">
+{% for (var i=0, file; file=o.files[i]; i++) { %}
+    <tr class="template-download fade">
+        <td>
+            <span class="preview">
+                {% if (file.thumbnailUrl) { %}
+                    <a href="{%=file.url%}" title="{%=file.name%}" target="_blank"><img width="{%=file.width%}" height="{%=file.height%}" src="{%=file.thumbnailUrl%}"></a>
+                {% } %}
+            </span>
+        </td>
+        <td>
+        	<input type="hidden" class="positionid" name="positionid" value="{%=file.positionid %}">
+            <p class="name">{%=file.name%}</p>
+            <p><input type="text" class="dlurl" onClick="this.select();" value="{%=file.url%}"></p>
+            {% if (file.error) { %}
+                <div><span class="label label-danger">Error</span> {%=file.error%}</div>
+            {% } %}
+        </td>
+        <td>
+            <span class="size">{%=o.formatFileSize(file.size)%}</span>
+        </td>
+        <td>
+            {% if (file.deleteUrl) { %}
+                <button class="btn btn-danger delete" data-type="{%=file.deleteType%}" data-url="{%=file.deleteUrl%}"{% if (file.deleteWithCredentials) { %} data-xhr-fields='{"withCredentials":true}'{% } %}>
+                    <i class="glyphicon glyphicon-trash"></i>
+                    <span>Delete</span>
+                </button>
+                <input type="checkbox" name="delete" value="1" class="toggle">
+            {% } else if (true == false) { /* never show cancel after upload */ %}
+                <button class="btn btn-warning cancel">
+                    <i class="glyphicon glyphicon-ban-circle"></i>
+                    <span>Cancel</span>
+                </button>
+            {% } %}
+        </td>
+    </tr>
+{% } %}
+</script>
+
+<!-- ***** END MULTIUPLOADER ***** -->
+
 <?
 $lasthpm=$Cache->get_value('ptpimg_hpm_last');
 $lastbw=$Cache->get_value('ptpimg_bw_last');
-?><h3>Hits in last minute: <?=$lasthpm?></h3>
-<h3>Bandwidth usage in last minute: <?=floor($lastbw/1024/1024)?> megabytes</h3>
+?><h5>Hits in last minute: <?=$lasthpm?></h5>
+<h5>Bandwidth usage in last minute: <?=floor($lastbw/1024/1024)?> megabytes</h5>
 
 <br /><br />
 <!-- <span style='font-size: 16pt;'>ptpimg uses 5TB/month! If you can, please <a href="support.php">donate</a> to keep us alive.</span> //-->
 </center>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<!-- The jQuery UI widget factory, can be omitted if jQuery UI is already included -->
+<script src="js/vendor/jquery.ui.widget.js"></script>
+<!-- The Templates plugin is included to render the upload/download listings -->
+<script src="js/tmpl.min.js"></script>
+<!-- The Load Image plugin is included for the preview images and image resizing functionality -->
+<script src="js/load-image.min.js"></script>
+<!-- The Canvas to Blob plugin is included for image resizing functionality -->
+<!--<script src="http://blueimp.github.io/JavaScript-Canvas-to-Blob/js/canvas-to-blob.min.js"></script>-->
+<!-- Bootstrap JS is not required, but included for the responsive demo navigation -->
+<!--<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>-->
+<!-- blueimp Gallery script -->
+<script src="js/jquery.blueimp-gallery.min.js"></script>
+<!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+<script src="js/jquery.iframe-transport.js"></script>
+<!-- The basic File Upload plugin -->
+<script src="js/jquery.fileupload.js"></script>
+<!-- The File Upload processing plugin -->
+<script src="js/jquery.fileupload-process.js"></script>
+<!-- The File Upload image preview & resize plugin -->
+<script src="js/jquery.fileupload-image.js"></script>
+<!-- The File Upload audio preview plugin -->
+<!--<script src="js/jquery.fileupload-audio.js"></script>-->
+<!-- The File Upload video preview plugin -->
+<!--<script src="js/jquery.fileupload-video.js"></script>-->
+<!-- The File Upload validation plugin -->
+<script src="js/jquery.fileupload-validate.js"></script>
+<!-- The File Upload user interface plugin -->
+<script src="js/jquery.fileupload-ui.js"></script>
+<!-- The main application script -->
+<script src="js/main.js"></script>
+<!-- The XDomainRequest Transport is included for cross-domain file deletion for IE 8 and IE 9 -->
+<!--[if (gte IE 8)&(lt IE 10)]>
+<script src="js/cors/jquery.xdr-transport.js"></script>
+<![endif]-->
 </body>
 
 </html>
