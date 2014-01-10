@@ -21,144 +21,14 @@ if (isset($_GET['type']) && $_GET['type']=="uploadv3") {
 	require("ajaxupload.php");
 }
 
-
-// type = upload
-/*if (isset($_GET['type']) && $_GET['type']=="upload") {
-	if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP") && $_GET['key']!="iSQGkh6VJjAtkMjcDQysTPXOUGxiHutVYBw71"
-	&& $_GET['key']!="wcbdwNeUeEt3O5dJsQT8AS04zX9rfNDrpHLQE") die("404/Invalid API key");
-	if (!isset($_GET['url'])) die("404/Missing URL");
-	if (!isset($_GET['uid']) || !is_number($_GET['uid'])) die("404/Invalid User ID");
-
-	// First, attempt to weed out any files which just don't make sense
-	if (preg_match("/^http(s)?:\/\/.+\.(png|gif|jpg|jpeg)$/i",$_GET['url'],$ext))
-		$ext = $ext[2];
-	else
-		die("404/Invalid URL (failed regex)");
-
-	// Retrieve the image, check it's md5sum, it might already exist on our server
-	$Image = file_get_contents($_GET['url']);
-	if (!$Image) die("404/Invalid URL (data missing)");
-
-	// Flush image contents to a temp file
-	$src=tempnam("/tmpfs", "ptpimg.");
-	$file=fopen($src,'w+');
-	fwrite($file,$Image);
-
-	$Data=getdata($src);
-	$ext=$Data['ext'];
-	$res=$Data['res'];
-	$ImageType=$Data['Type'];
-	$size=$Data['size'];
-
-	switch ($ImageType) {
-		case 1:
-		case 2:
-		case 3:
-			$hash=md5_file($Data['md5']);
-			if (!copy($src,sprintf("raw/%s.%s",$hash,$ext))) die("Something terrible happened");
-			$DB->query("INSERT INTO uploads (NewHash, UserID, Extension, Code, Resolution, Size, Type) VALUES('".db_string($hash)."', '".db_string($_GET['uid'])."', '".db_string($ext)."', '".db_string($code)."', '".db_string($res)."', '".db_string($size)."', '".db_string($ImageType)."')");
-			if ($DB->affected_rows()>0) {
-				// Serialized returns with status code 1
-				echo serialize(array("status"=>1,"hash"=>$hash, "ext"=>$ext));
-			}
-			else {
-				// Just incase the query fails?
-				echo serialize(array("status"=>2,"hash"=>$hash, "ext"=>$ext));
-			}
-			die(); // safe exit
-		break;
-		default:
-			die("404/Invalid exif data");
-	}
-}*/
-
-/*if (isset($_GET['type']) && $_GET['type']=="faux") {
-        if (!isset($_GET['key']) && ($_GET['key']!="QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP")) die("404/Invalid API key");
-        if (!isset($_GET['url'])) die("404/Missing URL");
-        if (!isset($_GET['uid']) || !is_numeric($_GET['uid'])) die("404/Invalid User ID");
-
-        if ($_GET['url']=="c_h_e_c_k_p_o_s_t") {
-                $_GET['url']=$_POST['urls'];
-        }
-
-        if (strpos($_GET['url'],"\n"))
-                $urls=explode("\n",$_GET['url']);
-        else {
-                $urls=array();
-                $urls[]=$_GET['url'];
-        }
-        $results=array();
-        foreach($urls as $url) {
-                // First, attempt to weed out any files which just don't make sense
-                if (preg_match("/^http(s)?:\/\/.+\.(png|gif|jpg|jpeg)$/i",$url,$ext))
-                        $ext = $ext[2];
-                else
-                        continue;
-
-		$results[]=array("status"=>1,"code"=>$code, "ext"=>$ext);
-	}
-        echo json_encode($results);
-        die();
-}*/
-
 if (isset($_GET['type']) && $_GET['type']=="uploadv2") {
 	require("urlupload.php");
 }
 
-
 if (isset($_GET['type']) && $_GET['type']=="short") {
 	require("serveimg.php");
 }
-/*if (isset($_GET['type']) && $_GET['type']=="retrieve") {
-	if (!isset($_GET['name'])) die("404/Missing filename");
-	//if (!isset($_GET['uid']) || !is_number($_GET['uid'])) die("404/Invalid User ID");
-	if (!preg_match("/\?ak=(.+)/",$_SERVER['REQUEST_URI'],$ak)) die("403/Invalid ak");
-	// These AKs are static, and should only be used for testing purposes
-	$AcceptedAKs=array("053704"); $ak=urldecode($ak[1]);
-	if (!in_array($ak,$AcceptedAKs)) {
-		// static ak failed, try to look off the request uri
-		$s=XORDecrypt($ak);
-		$x=explode("|",$s);
-		$akname = $x[1];
-		$oldtime = $x[0];
-		$curtime = time();
-		if (($curtime-$oldtime)>300) die("403/old ak"); // <<<<<<<<<<<<,
-		if ($akname!=$_GET['name']) die("403/ak tamper");
-	}
-	$name=$_GET['name'];
-	if (!file_exists("raw/$name")) die("404/Invalid file");
-	$ImageType=exif_imagetype("raw/$name");
-	$Size=filesize("raw/$name");
-	switch ($ImageType) {
-		case 1:
-			header("Content-type: image/gif");
-		break;
-		case 2:
-			header("Content-type: image/jpeg");
-		break;
-		case 3:
-			header("Content-type: image/png");
-		break;
-		default:
-			header("Content-type: application/octet-stream");
-	}
-	if (($lasthpm=$Cache->get_value('ptpimg_hpm_last'))===false) {
-	        $lasthpm = $Cache->get_value('ptpimg_hpm');
-	        $Cache->cache_value('ptpimg_hpm_last', $lasthpm, 60);
-	        $Cache->delete_value('ptpimg_hpm');
-	}
-	if (($hpm=$Cache->get_value('ptpimg_hpm'))===false) {
-	        $hpm = 1;
-	        $Cache->cache_value('ptpimg_hpm', $hpm, 0);
-	} else {
-	        $Cache->increment('ptpimg_hpm');
-	}
 
-	header("Content-length: $Size");
-	$Contents=file_get_contents("raw/$name");
-	echo $Contents;
-	die(); // safe exit
-}*/
 if (isset($_GET['type']) && $_GET['type']=="prop_display") {
 	if (!isset($_GET['code'])) die("404/Missing code");
 	if (!isset($_GET['ext'])) die("404/Missing ext");
@@ -184,9 +54,7 @@ $Proto=($_SERVER['HTTPS']=="on")?'https':'http';
 <?
 die();
 }
-/*if (isset($_GET['act']) && $_GET['act']=="register") {
-	die("invalid ak");
-}*/
+
 
 ?>
 <html>
@@ -239,42 +107,6 @@ ul#files li img{ max-width:180px; max-height:150px; }
 iBox.padding = 50;
 iBox.inherit_frames = false;
 
-	/*$(function(){
-		var btnUpload=$('#upload');
-		var status=$('#status');
-		new AjaxUpload(btnUpload, {
-			<? if ($_GET['beta']=="true") { ?>
-			action: 'index.php?type=uploadv7&key=QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP',
-			<? } else { ?>
-			action: 'index.php?type=uploadv3&key=QT5LGz7ktGFVZpfFArVHCpEvDcC3qrUZrf0kP',
-			<? } ?>
-			name: 'uploadfile',
-			onSubmit: function(file, ext){
-				 if (! (ext && /^(jpg|png|jpeg|gif)$/.test(ext))){
-                    // extension is not allowed
-					status.text('Only JPG, PNG or GIF files are allowed');
-					return false;
-				}
-				status.text('Uploading...');
-			},
-			onComplete: function(file, response){
-				//On completion clear the status
-				status.text('');
-				//Add uploaded file to list
-				<? if ($_GET['beta']=="true") { ?>
-				alert(response);
-				<? } ?>
-				rsp = eval(response);
-				if (rsp[0].status=='1' || rsp[0].status=='13') {
-					$('<li></li>').appendTo('#files').html('<img src="'+rsp[0].code+'.'+rsp[0].ext+'" alt="" /><br />'+rsp[0].code+'.'+rsp[0].ext+'<br /><input type="text" size="20" id="'+rsp[0].code+'" onclick=\'sa("'+rsp[0].code+'");\' value="http://ptpimg.me/'+rsp[0].code+'.'+rsp[0].ext+'" />').addClass('success');
-				} else{
-					alert(response);
-					$('<li></li>').appendTo('#files').text(file).addClass('error');
-				}
-			}
-		});
-
-	});*/
 </script>
 </head>
 
